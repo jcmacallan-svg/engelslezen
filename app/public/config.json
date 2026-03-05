@@ -2,7 +2,7 @@
   "logging": {
     "enabled": true,
     "provider": "google_apps_script",
-    "appsScriptUrl": "https://script.google.com/macros/s/AKfycbw7hqWrQUT5vy1eDeNmpf8Bs7s92gWia3Q7Nw82wDwfoCDgpA3fZyKU14L3ja6hn6OC/exec",
+    "appsScriptUrl": "https://script.google.com/macros/s/AKfycbwPuayc6yKJ77uBkoz31y34Nj3ucSlYyR06FmkAhZ9knQyTj4MygzBWLESq4MvM6XMM/exec",
     "timeoutMs": 8000
   }
 }
