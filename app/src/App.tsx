@@ -5,6 +5,45 @@ import { QuizPane } from './components/QuizPane'
 import type { Quiz } from './types'
 import './styles.css'
 
+function toOptions(q: any): Record<string, string> | undefined {
+  // Already correct format
+  if (q.options && typeof q.options === 'object' && !Array.isArray(q.options)) return q.options
+
+  // Common alternatives: choices / answers as arrays
+  const arr = q.choices ?? q.answers ?? q.options
+  if (Array.isArray(arr)) {
+    // ["...","..."] => A/B/C/D
+    if (arr.every((x: any) => typeof x === 'string')) {
+      const letters = ['A', 'B', 'C', 'D', 'E', 'F']
+      const out: Record<string, string> = {}
+      arr.forEach((txt: string, i: number) => {
+        const k = letters[i] ?? String(i + 1)
+        out[k] = String(txt)
+      })
+      return Object.keys(out).length ? out : undefined
+    }
+
+    // [{key:"A",text:"..."}, ...]
+    const out: Record<string, string> = {}
+    for (const item of arr) {
+      const k = (item.key ?? item.letter ?? item.id ?? '').toString().trim().toUpperCase()
+      const t = (item.text ?? item.label ?? item.value ?? '').toString().trim()
+      if (k && t) out[k] = t
+    }
+    return Object.keys(out).length ? out : undefined
+  }
+
+  // Last resort: parse A/B/C/D lines from the question text
+  const rawText = (q.text ?? q.stem ?? q.prompt ?? q.question ?? '').toString()
+  const lines = rawText.split(/\r?\n/).map((l: string) => l.trim()).filter(Boolean)
+  const opt: Record<string, string> = {}
+  for (const line of lines) {
+    const m = line.match(/^([A-F])[\)\.\:\-]\s*(.+)$/i)
+    if (m) opt[m[1].toUpperCase()] = m[2].trim()
+  }
+  return Object.keys(opt).length >= 2 ? opt : undefined
+}
+
 function useQuiz(slug: string) {
   const [quiz, setQuiz] = useState<Quiz | null>(null)
   const [err, setErr] = useState<string | null>(null)
@@ -17,39 +56,33 @@ function useQuiz(slug: string) {
       try {
         const res = await fetch(`./quizzes/${slug}/quiz.json`)
         if (!res.ok) throw new Error(`Kan quiz.json niet laden (${res.status})`)
-       const raw = await res.json()
+        const raw = await res.json()
 
-const normalized: Quiz = {
-  title: raw.title ?? raw.name ?? 'Quiz',
-  questions: (raw.questions ?? []).map((q: any, idx: number) => {
-    const correct = (q.correct ?? q.answerKey ?? q.answer ?? '').toString().trim().toUpperCase()
+        const normalized: Quiz = {
+          title: raw.title ?? raw.name ?? 'Quiz',
+          questions: (raw.questions ?? []).map((q: any, idx: number) => {
+            const options = toOptions(q)
+            const correct = (q.correct ?? q.answerKey ?? q.answer ?? '').toString().trim().toUpperCase()
 
-    return {
-      id: (q.id ?? q.qid ?? `q${q.number ?? idx + 1}`).toString(),
-      // volledige vraag/opdracht:
-      text: (q.text ?? q.stem ?? q.prompt ?? q.question ?? '').toString(),
+            return {
+              id: (q.id ?? q.qid ?? `q${q.number ?? idx + 1}`).toString(),
+              number: q.number ?? q.nr ?? idx + 1,
+              points: q.points ?? q.punten,
+              textRef: q.textRef ?? q.tekst ?? q.article ?? q.textLabel,
+              sourcePage: q.sourcePage,
+              text: (q.text ?? q.stem ?? q.prompt ?? q.question ?? '').toString(),
+              options,
+              correct,
+              feedback:
+                q.feedback ??
+                (q.feedbackCorrect || q.feedbackIncorrect
+                  ? { correct: q.feedbackCorrect, wrong: q.feedbackIncorrect }
+                  : undefined),
+            }
+          }),
+        }
 
-      // multiple choice opties
-      options: q.options ?? q.choices ?? q.answers ?? undefined,
-
-      // juist antwoord
-      correct,
-
-      // punten / tekstlabel (als aanwezig in jouw JSON)
-      points: q.points ?? q.punten ?? undefined,
-      textRef: q.textRef ?? q.tekst ?? q.article ?? undefined,
-
-      // feedback (als aanwezig)
-      feedback:
-        q.feedback ??
-        (q.feedbackCorrect || q.feedbackIncorrect
-          ? { correct: q.feedbackCorrect, wrong: q.feedbackIncorrect }
-          : undefined),
-    }
-  }),
-}
-
-if (!cancelled) setQuiz(normalized)
+        if (!cancelled) setQuiz(normalized)
       } catch (e: any) {
         if (!cancelled) setErr(e?.message ?? String(e))
       }

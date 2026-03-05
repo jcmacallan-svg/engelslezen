@@ -12,6 +12,8 @@ export function scoreQuiz(quiz: Quiz, answers: Record<string, string>) {
   const scored: ScoredQuestion[] = quiz.questions.map(q => {
     const chosen = (answers[q.id] ?? '').toString().trim().toUpperCase()
     const correct = (q.correct ?? '').toString().trim().toUpperCase()
+
+    // Only auto-score when an answer key is available (typically MC)
     const isCorrect = chosen !== '' && correct !== '' && chosen === correct
 
     let feedbackText = ''
