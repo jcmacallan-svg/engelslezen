@@ -38,7 +38,7 @@ function Home() {
         <li><Link to="/quiz/2019">Examen 2019 (demo)</Link></li>
       </ul>
       <p style={{ opacity: 0.8 }}>
-        Tip: Zet je eigen sets in <code>app/public/quizzes/&lt;slug&gt;/</code> met <code>source.pdf</code> + <code>quiz.json</code>.
+        Tip: zet je eigen sets in <code>app/public/quizzes/&lt;slug&gt;/</code> met <code>source.pdf</code> + <code>quiz.json</code>.
       </p>
     </div>
   )
@@ -48,7 +48,6 @@ function QuizRoute() {
   const { slug } = useParams()
   const safeSlug = slug || '2019'
   const { quiz, err } = useQuiz(safeSlug)
-  const [jumpPage, setJumpPage] = useState<number>(1)
 
   const pdfUrl = useMemo(() => `./quizzes/${safeSlug}/source.pdf`, [safeSlug])
 
@@ -64,13 +63,15 @@ function QuizRoute() {
 
   if (!quiz) return <div style={{ padding: 16 }}>Laden…</div>
 
+  // Make right side scroll, keep PDF in view
   return (
-    <div style={{ height: '100vh', display: 'grid', gridTemplateColumns: '1.25fr 1fr', gap: 12, padding: 12 }}>
-      <div style={{ minWidth: 0 }}>
-        <PdfPane url={pdfUrl} page={jumpPage} />
+    <div style={{ height: '100vh', overflow: 'hidden', display: 'flex', gap: 12, padding: 12 }}>
+      <div style={{ width: '55%', minWidth: 0, position: 'sticky', top: 12, alignSelf: 'flex-start', height: 'calc(100vh - 24px)' }}>
+        <PdfPane url={pdfUrl} />
       </div>
-      <div style={{ minWidth: 0 }}>
-        <QuizPane quiz={quiz} onJumpToPage={(p) => setJumpPage(p)} />
+
+      <div style={{ flex: 1, minWidth: 0, height: 'calc(100vh - 24px)', overflow: 'auto' }}>
+        <QuizPane quiz={quiz} />
       </div>
     </div>
   )
