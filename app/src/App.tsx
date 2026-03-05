@@ -17,8 +17,39 @@ function useQuiz(slug: string) {
       try {
         const res = await fetch(`./quizzes/${slug}/quiz.json`)
         if (!res.ok) throw new Error(`Kan quiz.json niet laden (${res.status})`)
-        const data = (await res.json()) as Quiz
-        if (!cancelled) setQuiz(data)
+       const raw = await res.json()
+
+const normalized: Quiz = {
+  title: raw.title ?? raw.name ?? 'Quiz',
+  questions: (raw.questions ?? []).map((q: any, idx: number) => {
+    const correct = (q.correct ?? q.answerKey ?? q.answer ?? '').toString().trim().toUpperCase()
+
+    return {
+      id: (q.id ?? q.qid ?? `q${q.number ?? idx + 1}`).toString(),
+      // volledige vraag/opdracht:
+      text: (q.text ?? q.stem ?? q.prompt ?? q.question ?? '').toString(),
+
+      // multiple choice opties
+      options: q.options ?? q.choices ?? q.answers ?? undefined,
+
+      // juist antwoord
+      correct,
+
+      // punten / tekstlabel (als aanwezig in jouw JSON)
+      points: q.points ?? q.punten ?? undefined,
+      textRef: q.textRef ?? q.tekst ?? q.article ?? undefined,
+
+      // feedback (als aanwezig)
+      feedback:
+        q.feedback ??
+        (q.feedbackCorrect || q.feedbackIncorrect
+          ? { correct: q.feedbackCorrect, wrong: q.feedbackIncorrect }
+          : undefined),
+    }
+  }),
+}
+
+if (!cancelled) setQuiz(normalized)
       } catch (e: any) {
         if (!cancelled) setErr(e?.message ?? String(e))
       }
