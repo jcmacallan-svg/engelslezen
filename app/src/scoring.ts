@@ -12,8 +12,6 @@ export function scoreQuiz(quiz: Quiz, answers: Record<string, string>) {
   const scored: ScoredQuestion[] = quiz.questions.map(q => {
     const chosen = (answers[q.id] ?? '').toString().trim().toUpperCase()
     const correct = (q.correct ?? '').toString().trim().toUpperCase()
-
-    // Only auto-score when an answer key is available (typically MC)
     const isCorrect = chosen !== '' && correct !== '' && chosen === correct
 
     let feedbackText = ''
@@ -30,13 +28,6 @@ export function scoreQuiz(quiz: Quiz, answers: Record<string, string>) {
     return { id: q.id, isCorrect, chosen, correct, feedbackText }
   })
 
-  // score by points if present, else 1 per question
-  const score = quiz.questions.reduce((acc, q) => {
-    const s = scored.find(x => x.id === q.id)
-    const pts = q.points ?? 1
-    return acc + (s?.isCorrect ? pts : 0)
-  }, 0)
-
-  const maxScore = quiz.questions.reduce((acc, q) => acc + (q.points ?? 1), 0)
-  return { score, maxScore, scored }
+  const score = scored.reduce((acc, s) => acc + (s.isCorrect ? 1 : 0), 0)
+  return { score, maxScore: quiz.questions.length, scored }
 }

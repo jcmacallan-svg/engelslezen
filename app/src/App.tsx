@@ -5,41 +5,35 @@ import { QuizPane } from './components/QuizPane'
 import type { Quiz } from './types'
 import './styles.css'
 
-
 function cleanQuestionText(s: string): string {
   return (s ?? '')
-    // Remove page/footer artefacts like GT-0071-a-19-2-o and "lees verder"
-    .replace(/^\s*GT\s*[-–]?\s*\d+[\w-–]*.*$/gmi, '')
-    .replace(/^\s*\d+\s*\/\s*\d+\s*lees\s*verder.*$/gmi, '')
+    // GT footers with or without hyphens, plus any trailing content
+    .replace(/^\s*GT\s*-?\s*\d+.*$/gmi, '')
+    .replace(/^\s*GT\s*\d+[A-Za-z0-9\-]*.*$/gmi, '')
+    // common "lees verder" lines
     .replace(/^\s*lees\s*verder.*$/gmi, '')
+    .replace(/^\s*\d+\s*\/\s*\d+\s*lees\s*verder.*$/gmi, '')
+    // arrows at end of a line
     .replace(/[►▶>]{2,}\s*$/gmi, '')
-    .split('\n')
+    // collapse empty lines
+    .split(/\r?\n/)
     .map(l => l.trimEnd())
     .filter(l => l.trim() !== '')
     .join('\n')
     .trim()
 }
 
-
 function toOptions(q: any): Record<string, string> | undefined {
-  // Already correct format
   if (q.options && typeof q.options === 'object' && !Array.isArray(q.options)) return q.options
 
-  // Common alternatives: choices / answers as arrays
   const arr = q.choices ?? q.answers ?? q.options
   if (Array.isArray(arr)) {
-    // ["...","..."] => A/B/C/D
     if (arr.every((x: any) => typeof x === 'string')) {
-      const letters = ['A', 'B', 'C', 'D', 'E', 'F']
+      const letters = ['A','B','C','D','E','F']
       const out: Record<string, string> = {}
-      arr.forEach((txt: string, i: number) => {
-        const k = letters[i] ?? String(i + 1)
-        out[k] = String(txt)
-      })
+      arr.forEach((txt: string, i: number) => { out[letters[i] ?? String(i+1)] = String(txt) })
       return Object.keys(out).length ? out : undefined
     }
-
-    // [{key:"A",text:"..."}, ...]
     const out: Record<string, string> = {}
     for (const item of arr) {
       const k = (item.key ?? item.letter ?? item.id ?? '').toString().trim().toUpperCase()
@@ -49,12 +43,11 @@ function toOptions(q: any): Record<string, string> | undefined {
     return Object.keys(out).length ? out : undefined
   }
 
-  // Last resort: parse A/B/C/D lines from the question text
-  const rawText = (q.text ?? q.stem ?? q.prompt ?? q.question ?? '').toString()
-  const lines = rawText.split(/\r?\n/).map((l: string) => l.trim()).filter(Boolean)
+  const rawText = cleanQuestionText((q.text ?? q.stem ?? q.prompt ?? q.question ?? '').toString())
+  const lines = rawText.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
   const opt: Record<string, string> = {}
   for (const line of lines) {
-    const m = line.match(/^([A-F])[\)\.\:\-]\s*(.+)$/i)
+    const m = line.match(/^([A-F])\s*[\)\.\:\-]\s*(.+)$/i)
     if (m) opt[m[1].toUpperCase()] = m[2].trim()
   }
   return Object.keys(opt).length >= 2 ? opt : undefined
@@ -78,22 +71,17 @@ function useQuiz(slug: string) {
           title: raw.title ?? raw.name ?? 'Quiz',
           questions: (raw.questions ?? []).map((q: any, idx: number) => {
             const options = toOptions(q)
-            const correct = (q.correct ?? q.answerKey ?? q.answer ?? '').toString().trim().toUpperCase()
-
             return {
               id: (q.id ?? q.qid ?? `q${q.number ?? idx + 1}`).toString(),
               number: q.number ?? q.nr ?? idx + 1,
               points: q.points ?? q.punten,
               textRef: q.textRef ?? q.tekst ?? q.article ?? q.textLabel,
-              sourcePage: q.sourcePage,
+
               text: cleanQuestionText((q.text ?? q.stem ?? q.prompt ?? q.question ?? '').toString()),
               options,
-              correct,
-              feedback:
-                q.feedback ??
-                (q.feedbackCorrect || q.feedbackIncorrect
-                  ? { correct: q.feedbackCorrect, wrong: q.feedbackIncorrect }
-                  : undefined),
+              correct: (q.correct ?? q.answerKey ?? q.answer ?? '').toString().trim().toUpperCase(),
+              feedback: q.feedback ?? ((q.feedbackCorrect || q.feedbackIncorrect) ? { correct: q.feedbackCorrect, wrong: q.feedbackIncorrect } : undefined),
+              sourcePage: q.sourcePage
             }
           }),
         }
@@ -143,13 +131,11 @@ function QuizRoute() {
 
   if (!quiz) return <div style={{ padding: 16 }}>Laden…</div>
 
-  // Make right side scroll, keep PDF in view
   return (
     <div style={{ height: '100vh', overflow: 'hidden', display: 'flex', gap: 12, padding: 12 }}>
       <div style={{ width: '55%', minWidth: 0, position: 'sticky', top: 12, alignSelf: 'flex-start', height: 'calc(100vh - 24px)' }}>
         <PdfPane url={pdfUrl} />
       </div>
-
       <div style={{ flex: 1, minWidth: 0, height: 'calc(100vh - 24px)', overflow: 'auto' }}>
         <QuizPane quiz={quiz} />
       </div>
