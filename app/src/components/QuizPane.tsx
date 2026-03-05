@@ -40,12 +40,12 @@ async function logToGoogleSheets(payload: any): Promise<{ ok: boolean; message?:
   try {
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(payload),
       signal: controller.signal,
     })
-    const text = await res.text().catch(() => '')
-    if (!res.ok) return { ok: false, message: `Google log fout (${res.status}): ${text || 'onbekend'}` }
+    // no-cors gives an opaque response; if fetch didn't throw, assume ok.
     return { ok: true }
   } catch (e: any) {
     return { ok: false, message: e?.name === 'AbortError' ? 'Google log timeout.' : (e?.message ?? String(e)) }

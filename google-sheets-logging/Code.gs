@@ -1,6 +1,6 @@
 const SHEET_NAME = 'Submissions';
 // ID only (between /d/ and /edit)
-const SPREADSHEET_ID = '1vm16j51FDMgnfqGxpYyi2drCbqbQQl3OH1yOHmN_ovY';
+const SPREADSHEET_ID = 'PASTE_SHEET_ID_HERE';
 
 function doGet(e) {
   return ContentService.createTextOutput(JSON.stringify({ ok: true, message: 'Quiz logger online' }))
