@@ -13,6 +13,47 @@ type Submission = {
   maxScore: number
 }
 
+async function loadConfig(): Promise<any> {
+  try {
+    const res = await fetch('./config.json', { cache: 'no-store' })
+    if (!res.ok) return null
+    return await res.json()
+  } catch {
+    return null
+  }
+}
+
+async function logToGoogleSheets(payload: any): Promise<{ ok: boolean; message?: string }> {
+  const cfg = await loadConfig()
+  const logging = cfg?.logging
+  if (!logging?.enabled) return { ok: true }
+  if (logging.provider !== 'google_apps_script') return { ok: true }
+
+  const url = (logging.appsScriptUrl ?? '').toString().trim()
+  if (!url || url.includes('PASTE_YOUR_GOOGLE')) {
+    return { ok: false, message: 'Logging staat aan, maar appsScriptUrl is nog niet ingesteld in app/public/config.json.' }
+  }
+
+  const controller = new AbortController()
+  const t = setTimeout(() => controller.abort(), Number(logging.timeoutMs ?? 8000))
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    })
+    const text = await res.text().catch(() => '')
+    if (!res.ok) return { ok: false, message: `Google log fout (${res.status}): ${text || 'onbekend'}` }
+    return { ok: true }
+  } catch (e: any) {
+    return { ok: false, message: e?.name === 'AbortError' ? 'Google log timeout.' : (e?.message ?? String(e)) }
+  } finally {
+    clearTimeout(t)
+  }
+}
+
 function download(filename: string, text: string) {
   const el = document.createElement('a')
   el.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text))
@@ -43,6 +84,31 @@ export function QuizPane({ quiz, onJumpToPage }: Props) {
       score,
       maxScore,
     }
+
+    // Local log (per apparaat)
+    const key = 'pdf-quizzer-submissions'
+    const existing = JSON.parse(localStorage.getItem(key) || '[]') as Submission[]
+    existing.push(submission)
+    localStorage.setItem(key, JSON.stringify(existing))
+
+    // Central log (Google Sheets)
+    ;(async () => {
+      const result = await logToGoogleSheets({
+        kind: 'submission',
+        studentName: submission.studentName,
+        quizTitle: submission.quizTitle,
+        createdAt: submission.createdAt,
+        score: submission.score,
+        maxScore: submission.maxScore,
+        answers: submission.answers,
+      })
+      if (result.ok) {
+        alert('Ingeleverd! ✅')
+      } else {
+        alert(`Ingeleverd (lokaal) ✅\nMaar upload naar Google Sheets mislukte:\n${result.message ?? 'onbekend'}`)
+      }
+    })()
+  }
 
     const key = 'pdf-quizzer-submissions'
     const existing = JSON.parse(localStorage.getItem(key) || '[]') as Submission[]
