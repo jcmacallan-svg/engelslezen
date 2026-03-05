@@ -13,6 +13,47 @@ type Submission = {
   maxScore: number
 }
 
+async function loadConfig(): Promise<any> {
+  try {
+    const res = await fetch('./config.json', { cache: 'no-store' })
+    if (!res.ok) return null
+    return await res.json()
+  } catch {
+    return null
+  }
+}
+
+async function logToGoogleSheets(payload: any): Promise<{ ok: boolean; message?: string }> {
+  const cfg = await loadConfig()
+  const logging = cfg?.logging
+  if (!logging?.enabled) return { ok: true }
+  if (logging.provider !== 'google_apps_script') return { ok: true }
+
+  const url = (logging.appsScriptUrl ?? '').toString().trim()
+  if (!url || url.includes('PASTE_YOUR_GOOGLE')) {
+    return { ok: false, message: 'Logging staat aan, maar appsScriptUrl is nog niet ingesteld in app/public/config.json.' }
+  }
+
+  const controller = new AbortController()
+  const t = setTimeout(() => controller.abort(), Number(logging.timeoutMs ?? 8000))
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    })
+    const text = await res.text().catch(() => '')
+    if (!res.ok) return { ok: false, message: `Google log fout (${res.status}): ${text || 'onbekend'}` }
+    return { ok: true }
+  } catch (e: any) {
+    return { ok: false, message: e?.name === 'AbortError' ? 'Google log timeout.' : (e?.message ?? String(e)) }
+  } finally {
+    clearTimeout(t)
+  }
+}
+
 function download(filename: string, text: string) {
   const el = document.createElement('a')
   el.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text))
@@ -31,7 +72,7 @@ export function QuizPane({ quiz, onJumpToPage }: Props) {
   const canSubmit = studentName.trim().length > 0
   const { score, maxScore, scored } = useMemo(() => scoreQuiz(quiz, answers), [quiz, answers])
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!canSubmit) { alert('Vul eerst je naam in.'); return }
     setSubmitted({ score, maxScore, details: scored })
 
@@ -44,11 +85,28 @@ export function QuizPane({ quiz, onJumpToPage }: Props) {
       maxScore,
     }
 
+    // Local log (per apparaat)
     const key = 'pdf-quizzer-submissions'
     const existing = JSON.parse(localStorage.getItem(key) || '[]') as Submission[]
     existing.push(submission)
     localStorage.setItem(key, JSON.stringify(existing))
-    alert('Ingeleverd!')
+
+    // Central log (Google Sheets)
+    const result = await logToGoogleSheets({
+      kind: 'submission',
+      studentName: submission.studentName,
+      quizTitle: submission.quizTitle,
+      createdAt: submission.createdAt,
+      score: submission.score,
+      maxScore: submission.maxScore,
+      answers: submission.answers,
+    })
+
+    if (result.ok) {
+      alert('Ingeleverd! ✅')
+    } else {
+      alert(`Ingeleverd (lokaal) ✅\nMaar upload naar Google Sheets mislukte:\n${result.message ?? 'onbekend'}`)
+    }
   }
 
   function exportCsv() {
@@ -89,7 +147,7 @@ export function QuizPane({ quiz, onJumpToPage }: Props) {
           </div>
 
           <button
-            onClick={handleSubmit}
+            onClick={() => { void handleSubmit() }}
             style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid #2a2f48', background: '#1b3a8a', color: '#e9edf3', cursor: 'pointer' }}
           >
             Inleveren
@@ -117,7 +175,6 @@ export function QuizPane({ quiz, onJumpToPage }: Props) {
           const result = submitted?.details.find(d => d.id === q.id)
           const labelNum = (q.number ?? (idx + 1))
 
-          // Split text: first line bold, rest normal (pre-wrap)
           const parts = (q.text ?? '').split(/\r?\n/)
           const head = (parts[0] ?? '').trim()
           const body = parts.slice(1).join('\n').trim()
@@ -135,12 +192,12 @@ export function QuizPane({ quiz, onJumpToPage }: Props) {
                 {body && <div style={{ fontWeight: 400, whiteSpace: 'pre-wrap', marginTop: 6, opacity: 0.95 }}>{body}</div>}
               </div>
 
-              {typeof q.sourcePage === 'number' && onJumpToPage && (
+              {typeof (q as any).sourcePage === 'number' && onJumpToPage && (
                 <button
-                  onClick={() => onJumpToPage(q.sourcePage!)}
+                  onClick={() => onJumpToPage((q as any).sourcePage)}
                   style={{ marginBottom: 10, padding: '6px 10px', borderRadius: 10, border: '1px solid #2a2f48', background: '#151826', color: '#e9edf3', cursor: 'pointer' }}
                 >
-                  Ga naar pagina {q.sourcePage} in tekst
+                  Ga naar pagina {(q as any).sourcePage} in tekst
                 </button>
               )}
 
