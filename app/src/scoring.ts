@@ -10,9 +10,9 @@ export type ScoredQuestion = {
 
 export function scoreQuiz(quiz: Quiz, answers: Record<string, string>) {
   const scored: ScoredQuestion[] = quiz.questions.map(q => {
-    const chosen = answers[q.id]
-    const correct = q.correct ?? ''
-    const isCorrect = chosen !== undefined && correct !== '' && chosen === correct
+    const chosen = (answers[q.id] ?? '').toString().trim().toUpperCase()
+    const correct = (q.correct ?? '').toString().trim().toUpperCase()
+    const isCorrect = chosen !== '' && correct !== '' && chosen === correct
 
     let feedbackText = ''
     if (q.feedback) {
