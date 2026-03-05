@@ -1,31 +1,23 @@
-/**
- * Google Apps Script Web App (POST endpoint) for logging quiz submissions.
- *
- * Steps:
- * 1) Google Drive -> New -> Google Apps Script
- * 2) Paste this code into Code.gs
- * 3) Set SPREADSHEET_ID below (or leave empty to auto-create on first request)
- * 4) Deploy -> New deployment -> Type: Web app
- *    - Execute as: Me
- *    - Who has access: Anyone
- * 5) Copy the Web app URL and paste into: app/public/config.json -> logging.appsScriptUrl
- */
-
 const SHEET_NAME = 'Submissions';
-const SPREADSHEET_ID = ''; // optional
+// ID only (between /d/ and /edit)
+const SPREADSHEET_ID = 'PASTE_SHEET_ID_HERE';
+
+function doGet(e) {
+  return ContentService.createTextOutput(JSON.stringify({ ok: true, message: 'Quiz logger online' }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
 
 function doPost(e) {
   try {
     const body = JSON.parse((e.postData && e.postData.contents) || '{}');
-    if (body.kind !== 'submission') return jsonResponse({ ok: false, error: 'Invalid kind' }, 400);
+    if (body.kind !== 'submission') return ok_({ ok: false, error: 'Invalid kind' });
 
-    const ss = getOrCreateSpreadsheet_();
-    const sheet = getOrCreateSheet_(ss, SHEET_NAME);
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const sheet = ss.getSheetByName(SHEET_NAME) || ss.insertSheet(SHEET_NAME);
 
     const fixedHeaders = ['createdAt', 'studentName', 'quizTitle', 'score', 'maxScore'];
     const answerKeys = body.answers ? Object.keys(body.answers).sort() : [];
     const headers = fixedHeaders.concat(answerKeys);
-
     ensureHeaderRow_(sheet, headers);
 
     const headerRow = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
@@ -39,27 +31,15 @@ function doPost(e) {
     });
 
     sheet.appendRow(row);
-    return jsonResponse({ ok: true }, 200);
+    return ok_({ ok: true });
   } catch (err) {
-    return jsonResponse({ ok: false, error: String(err) }, 500);
+    return ok_({ ok: false, error: String(err) });
   }
 }
 
-function jsonResponse(obj) {
-  return ContentService
-    .createTextOutput(JSON.stringify(obj))
+function ok_(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
-}
-
-function getOrCreateSpreadsheet_() {
-  if (SPREADSHEET_ID && SPREADSHEET_ID.trim()) return SpreadsheetApp.openById(SPREADSHEET_ID.trim());
-  const ss = SpreadsheetApp.create('PDF Quizzer Submissions');
-  console.log('Created spreadsheet. ID:', ss.getId());
-  return ss;
-}
-
-function getOrCreateSheet_(ss, name) {
-  return ss.getSheetByName(name) || ss.insertSheet(name);
 }
 
 function ensureHeaderRow_(sheet, headers) {
