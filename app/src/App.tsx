@@ -5,6 +5,22 @@ import { QuizPane } from './components/QuizPane'
 import type { Quiz } from './types'
 import './styles.css'
 
+
+function cleanQuestionText(s: string): string {
+  return (s ?? '')
+    // Remove page/footer artefacts like GT-0071-a-19-2-o and "lees verder"
+    .replace(/^\s*GT\s*[-–]?\s*\d+[\w-–]*.*$/gmi, '')
+    .replace(/^\s*\d+\s*\/\s*\d+\s*lees\s*verder.*$/gmi, '')
+    .replace(/^\s*lees\s*verder.*$/gmi, '')
+    .replace(/[►▶>]{2,}\s*$/gmi, '')
+    .split('\n')
+    .map(l => l.trimEnd())
+    .filter(l => l.trim() !== '')
+    .join('\n')
+    .trim()
+}
+
+
 function toOptions(q: any): Record<string, string> | undefined {
   // Already correct format
   if (q.options && typeof q.options === 'object' && !Array.isArray(q.options)) return q.options
@@ -70,7 +86,7 @@ function useQuiz(slug: string) {
               points: q.points ?? q.punten,
               textRef: q.textRef ?? q.tekst ?? q.article ?? q.textLabel,
               sourcePage: q.sourcePage,
-              text: (q.text ?? q.stem ?? q.prompt ?? q.question ?? '').toString(),
+              text: cleanQuestionText((q.text ?? q.stem ?? q.prompt ?? q.question ?? '').toString()),
               options,
               correct,
               feedback:
