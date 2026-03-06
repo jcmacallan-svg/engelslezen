@@ -9,6 +9,7 @@ type Props = { quiz: Quiz; onJumpToPage?: (page: number) => void }
 type Submission = {
   studentName: string
   quizTitle: string
+  startedAt: string
   createdAt: string
   submittedAt: string
   answers: Record<string, string>
@@ -96,6 +97,7 @@ function download(filename: string, text: string) {
 }
 
 export function QuizPane({ quiz, onJumpToPage }: Props) {
+  const [startedAt] = useState(() => new Date().toISOString())
   const [studentName, setStudentName] = useState('')
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [submitted, setSubmitted] = useState<null | { score: number; maxScore: number; details: ReturnType<typeof scoreQuiz>['scored'] }>(null)
@@ -110,6 +112,7 @@ export function QuizPane({ quiz, onJumpToPage }: Props) {
     const submission: Submission = {
       studentName: studentName.trim(),
       quizTitle: quiz.title,
+      startedAt,
       createdAt: new Date().toISOString(),
       submittedAt: new Date().toISOString(),
       answers,
@@ -128,6 +131,7 @@ export function QuizPane({ quiz, onJumpToPage }: Props) {
       kind: 'submission',
       studentName: submission.studentName,
       quizTitle: submission.quizTitle,
+      startedAt: submission.startedAt,
       createdAt: submission.createdAt,
       submittedAt: submission.submittedAt,
       score: submission.score,
