@@ -259,9 +259,6 @@ export function QuizPane({ quiz, onJumpToPage }: Props) {
                   placeholder="Antwoord"
                   style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid #2a2f48', background: '#0b0c0f', color: '#e9edf3' }}
                 />
-              )}                  placeholder="Antwoord"
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid #2a2f48', background: '#0b0c0f', color: '#e9edf3' }}
-                />
               )}
 
               {submitted && result && (
