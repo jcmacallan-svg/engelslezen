@@ -185,19 +185,48 @@ export function QuizPane({ quiz, onJumpToPage }: Props) {
               <div style={{ marginBottom: 8 }}>
                 {q.type === 'mapping' ? (
                   (() => {
-                    const t = (displayText ?? '').split(/\r?\n/).map(l => l.trim()).filter(Boolean)
-                    const optionStart = t.findIndex(l => /^[a-d]\b/i.test(l))
-                    const arrowStart = t.findIndex(l => l.startsWith('→') || l.startsWith('->') )
-                    const instr = (optionStart === -1 ? (arrowStart === -1 ? t : t.slice(0, arrowStart)) : t.slice(0, optionStart))
-                      .join(' ')
-                      .replace(/\s+/g, ' ')
-                      .trim()
-                    const opts = (optionStart === -1 ? [] : t.slice(optionStart, arrowStart === -1 ? t.length : arrowStart))
-                    const arrow = (arrowStart === -1 ? '' : t.slice(arrowStart).join(' ').replace(/\s+/g,' ').trim())
+                    const lines = (displayText ?? '').split(/\r?\n/).map(l => l.trim()).filter(Boolean)
+
+                    // Remove option lines (a/b/c/d) and keep them separately
+                    const optionStart = lines.findIndex(l => /^[a-d]\b/i.test(l))
+                    const arrowStart = lines.findIndex(l => l.startsWith('→') || l.startsWith('->'))
+
+                    const instrLines = (optionStart === -1 ? (arrowStart === -1 ? lines : lines.slice(0, arrowStart)) : lines.slice(0, optionStart))
+                    const opts = (optionStart === -1 ? [] : lines.slice(optionStart, arrowStart === -1 ? lines.length : arrowStart))
+                    const arrow = (arrowStart === -1 ? '' : lines.slice(arrowStart).join(' ').replace(/\s+/g, ' ').trim())
+
+                    const instrText = instrLines.join(' ').replace(/\s+/g, ' ').trim()
+
+                    // For vraag 31: bold only the first sentence and the specific instruction sentence
+                    const sentence1 = 'In de tekst komen drie deskundigen aan het woord:'
+                    const sentence2 = 'Geef van elke persoon aan welke van de volgende beweringen aansluit bij wat hij zegt volgens de tekst.'
+
+                    let lead = ''
+                    let mid = ''
+                    let rest = instrText
+
+                    if (rest.includes(sentence1)) {
+                      const idx = rest.indexOf(sentence1)
+                      // drop anything before sentence1
+                      rest = rest.slice(idx)
+                      lead = sentence1
+                      rest = rest.slice(sentence1.length).trim()
+                    }
+
+                    if (rest.includes(sentence2)) {
+                      const idx2 = rest.indexOf(sentence2)
+                      mid = sentence2
+                      // everything before sentence2 (e.g. the 1/2/3 list) should be normal text
+                      const before = rest.slice(0, idx2).trim()
+                      const after = rest.slice(idx2 + sentence2.length).trim()
+                      rest = [before, after].filter(Boolean).join('\n')
+                    }
 
                     return (
                       <>
-                        {instr && <div style={{ fontWeight: 700, whiteSpace: 'pre-wrap' }}>{instr}</div>}
+                        {lead && <div style={{ fontWeight: 700, whiteSpace: 'pre-wrap' }}>{lead}</div>}
+                        {rest && <div style={{ marginTop: lead ? 8 : 0, fontWeight: 400, whiteSpace: 'pre-wrap', opacity: 0.95 }}>{rest}</div>}
+                        {mid && <div style={{ marginTop: 8, fontWeight: 700, whiteSpace: 'pre-wrap' }}>{mid}</div>}
                         {opts.length > 0 && (
                           <div style={{ marginTop: 8, whiteSpace: 'pre-wrap', opacity: 0.95 }}>
                             {opts.map((l, i) => <div key={i}>{l}</div>)}
@@ -212,8 +241,7 @@ export function QuizPane({ quiz, onJumpToPage }: Props) {
                     {head && <div style={{ fontWeight: 700, whiteSpace: 'pre-wrap' }}>{head}</div>}
                     {body && <div style={{ fontWeight: 400, whiteSpace: 'pre-wrap', marginTop: 6, opacity: 0.95 }}>{body}</div>}
                   </>
-                )}
-              </div>
+                )}</div>
 
               {typeof (q as any).sourcePage === 'number' && onJumpToPage && (
                 <button
