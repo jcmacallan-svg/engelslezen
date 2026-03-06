@@ -225,7 +225,19 @@ export function QuizPane({ quiz, onJumpToPage }: Props) {
                     return (
                       <>
                         {lead && <div style={{ fontWeight: 700, whiteSpace: 'pre-wrap' }}>{lead}</div>}
-                        {rest && <div style={{ marginTop: lead ? 8 : 0, fontWeight: 400, whiteSpace: 'pre-wrap', opacity: 0.95 }}>{rest}</div>}
+                        {rest && (
+                          (labelNum === 31)
+                            ? (
+                              <div style={{ marginTop: lead ? 8 : 0, fontWeight: 400, whiteSpace: 'pre-wrap', opacity: 0.95 }}>
+                                {rest.split(/\r?\n/).map((ln, i) => (
+                                  <div key={i} style={{ marginTop: i === 0 ? 0 : 6 }}>{ln}</div>
+                                ))}
+                              </div>
+                            )
+                            : (
+                              <div style={{ marginTop: lead ? 8 : 0, fontWeight: 400, whiteSpace: 'pre-wrap', opacity: 0.95 }}>{rest}</div>
+                            )
+                        )}
                         {mid && <div style={{ marginTop: 8, fontWeight: 700, whiteSpace: 'pre-wrap' }}>{mid}</div>}
                         {opts.length > 0 && (
                           <div style={{ marginTop: 8, whiteSpace: 'pre-wrap', opacity: 0.95 }}>
