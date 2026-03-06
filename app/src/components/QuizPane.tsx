@@ -2,6 +2,8 @@ import React, { useMemo, useState } from 'react'
 import type { Quiz } from '../types'
 import { scoreQuiz } from '../scoring'
 
+const SHOW_EXPORT = false // zet op true als je de CSV-exportknop zichtbaar wilt maken
+
 type Props = { quiz: Quiz; onJumpToPage?: (page: number) => void }
 
 type Submission = {
@@ -145,20 +147,6 @@ export function QuizPane({ quiz, onJumpToPage }: Props) {
               style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid #2a2f48', background: '#0b0c0f', color: '#e9edf3' }}
             />
           </div>
-
-          <button
-            onClick={() => { void handleSubmit() }}
-            style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid #2a2f48', background: '#1b3a8a', color: '#e9edf3', cursor: 'pointer' }}
-          >
-            Inleveren
-          </button>
-
-          <button
-            onClick={exportCsv}
-            style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid #2a2f48', background: '#151826', color: '#e9edf3', cursor: 'pointer' }}
-          >
-            Export CSV (docent)
-          </button>
         </div>
 
         {submitted && (
@@ -236,6 +224,31 @@ export function QuizPane({ quiz, onJumpToPage }: Props) {
             </div>
           )
         })}
+      </div>
+      {/* Acties pas onderaan zichtbaar (na alle vragen) */}
+      <div style={{ marginTop: 14, padding: 12, background: '#11131a', border: '1px solid #22263a', borderRadius: 12 }}>
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => { void handleSubmit() }}
+            style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid #2a2f48', background: '#1b3a8a', color: '#e9edf3', cursor: 'pointer' }}
+          >
+            Inleveren
+          </button>
+
+          {SHOW_EXPORT && (
+            <button
+              onClick={exportCsv}
+              style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid #2a2f48', background: '#151826', color: '#e9edf3', cursor: 'pointer' }}
+            >
+              Export CSV (docent)
+            </button>
+          )}
+        </div>
+        {!SHOW_EXPORT && (
+          <div style={{ marginTop: 8, fontSize: 12, opacity: 0.55 }}>
+            (CSV-export is verborgen. Zet <code>SHOW_EXPORT</code> op <code>true</code> in <code>QuizPane.tsx</code> als je ’m nodig hebt.)
+          </div>
+        )}
       </div>
     </div>
   )
