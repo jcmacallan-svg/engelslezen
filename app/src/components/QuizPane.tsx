@@ -189,7 +189,55 @@ export function QuizPane({ quiz, onJumpToPage }: Props) {
                 </button>
               )}
 
-              {q.options ? (
+              {q.type === 'multi_truefalse' && q.statements && q.tfChoices ? (
+                <div style={{ display: 'grid', gap: 10 }}>
+                  {q.statements.map((st) => {
+                    const key = `${q.id}.${st.id}`
+                    const chosenTF = answers[key] ?? ''
+                    return (
+                      <div key={st.id} style={{ border: '1px solid #2a2f48', borderRadius: 10, padding: 10 }}>
+                        <div style={{ marginBottom: 8 }}>{st.id}. {st.text}</div>
+                        <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+                          {q.tfChoices!.map((c) => (
+                            <label key={c} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                              <input
+                                type="radio"
+                                name={key}
+                                value={c}
+                                checked={chosenTF === c}
+                                onChange={() => setAnswers(a => ({ ...a, [key]: c }))}
+                              />
+                              <span>{c}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : q.type === 'mapping' && q.parts ? (
+                <div style={{ display: 'grid', gap: 10 }}>
+                  {q.parts.map((p) => {
+                    const key = `${q.id}.${p.id}`
+                    const chosenMap = (answers[key] ?? '').toString()
+                    return (
+                      <div key={p.id} style={{ display: 'flex', gap: 10, alignItems: 'center', border: '1px solid #2a2f48', borderRadius: 10, padding: 10 }}>
+                        <div style={{ flex: 1 }}>{p.label}</div>
+                        <select
+                          value={chosenMap}
+                          onChange={(e) => setAnswers(a => ({ ...a, [key]: e.target.value }))}
+                          style={{ padding: '8px 10px', borderRadius: 10, border: '1px solid #2a2f48', background: '#0b0c0f', color: '#e9edf3' }}
+                        >
+                          <option value="">—</option>
+                          {['a','b','c','d'].map((c) => (
+                            <option key={c} value={c}>{c.toUpperCase()}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : q.options ? (
                 <div style={{ display: 'grid', gap: 8 }}>
                   {Object.entries(q.options).map(([key, label]) => (
                     <label key={key} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: 10, borderRadius: 10, border: '1px solid #2a2f48' }}>
@@ -211,12 +259,15 @@ export function QuizPane({ quiz, onJumpToPage }: Props) {
                   placeholder="Antwoord"
                   style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid #2a2f48', background: '#0b0c0f', color: '#e9edf3' }}
                 />
+              )}                  placeholder="Antwoord"
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid #2a2f48', background: '#0b0c0f', color: '#e9edf3' }}
+                />
               )}
 
               {submitted && result && (
-                <div style={{ marginTop: 10, padding: 10, borderRadius: 10, border: '1px solid #2a2f48', background: result.isCorrect ? '#0f2a1a' : '#2a1212' }}>
+                <div style={{ marginTop: 10, padding: 10, borderRadius: 10, border: '1px solid #2a2f48', background: result.isFullyCorrect ? '#0f2a1a' : '#2a1212' }}>
                   <div style={{ fontWeight: 800 }}>
-                    {result.isCorrect ? '✅ Goed' : '❌ Fout'} {result.correct ? `(goed: ${result.correct})` : ''}
+                    {result.isFullyCorrect ? '✅ Goed' : '❌ (Deels) fout'} — {result.pointsEarned} / {result.pointsPossible} p
                   </div>
                   {result.feedbackText && <div style={{ marginTop: 6, opacity: 0.9 }}>{result.feedbackText}</div>}
                 </div>

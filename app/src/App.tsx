@@ -156,8 +156,15 @@ function useQuiz(slug: string) {
                 const n = (q.number ?? q.nr ?? (idx + 1)) as number
                 return n === 3 ? formatQuestion3Text(base) : base
               })(),
+              type: q.type ?? (options ? 'mc' : 'short_answer'),
+              statements: q.statements,
+              tfChoices: q.choices,
+              tfAnswerKey: (q.type === 'multi_truefalse' ? q.answerKey : undefined),
+              parts: q.parts,
+              mapChoices: ['a','b','c','d'],
+              mapAnswerKey: (q.type === 'mapping' ? Object.fromEntries((q.parts ?? []).map((p: any) => [p.id, p.answer])) : undefined),
               options,
-              correct: (q.correct ?? q.answerKey ?? q.answer ?? '').toString().trim().toUpperCase(),
+              correct: (typeof q.answerKey === 'string' ? q.answerKey : (q.correct ?? q.answer ?? '')).toString().trim().toUpperCase(),
               feedback: q.feedback ?? ((q.feedbackCorrect || q.feedbackIncorrect) ? { correct: q.feedbackCorrect, wrong: q.feedbackIncorrect } : undefined),
               sourcePage: (q.sourcePage ?? getStartPageFromTextRef((q.textRef ?? q.tekst ?? q.article ?? q.textLabel ?? getTextRefFromQuestionNumber((q.number ?? q.nr ?? (idx + 1)) as number)) as any))
             }
