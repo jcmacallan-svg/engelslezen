@@ -226,6 +226,7 @@ export function QuizPane({ quiz, onJumpToPage }: Props) {
                     const arrowStart = lines.findIndex(l => l.startsWith('→') || l.startsWith('->'))
 
                     const instrLines = (optionStart === -1 ? (arrowStart === -1 ? lines : lines.slice(0, arrowStart)) : lines.slice(0, optionStart))
+                    const peopleLines = instrLines.filter(l => /^\d+\b/.test(l))
                     const opts = (optionStart === -1 ? [] : lines.slice(optionStart, arrowStart === -1 ? lines.length : arrowStart))
                     const arrow = (arrowStart === -1 ? '' : lines.slice(arrowStart).join(' ').replace(/\s+/g, ' ').trim())
 
@@ -251,7 +252,7 @@ export function QuizPane({ quiz, onJumpToPage }: Props) {
                       const idx2 = rest.indexOf(sentence2)
                       mid = sentence2
                       // everything before sentence2 (e.g. the 1/2/3 list) should be normal text
-                      const before = rest.slice(0, idx2).trim()
+                      const before = (labelNum === 31 && peopleLines.length) ? peopleLines.join('\n') : rest.slice(0, idx2).trim()
                       const after = rest.slice(idx2 + sentence2.length).trim()
                       rest = [before, after].filter(Boolean).join('\n')
                     }
