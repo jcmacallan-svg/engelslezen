@@ -63,6 +63,40 @@ function cleanQuestionText(s: string): string {
     .trim()
 }
 
+function formatQuestion3Text(text: string): string {
+  // Normalize formatting for vraag 3: make the instruction bold-able (rendered bold on first block)
+  // and keep hard enters only where they help readability.
+  const cleaned = (text ?? '').trim()
+
+  // Split instruction part from bracket parts (e.g. [A], [B], [C])
+  const lines = cleaned.split(/\r?\n/)
+  const firstBracketIdx = lines.findIndex(l => /^\[[A-Za-z]\]/.test(l.trim()))
+  const instructionLines = (firstBracketIdx === -1 ? lines : lines.slice(0, firstBracketIdx)).join(' ').replace(/\s+/g, ' ').trim()
+  const bracketLines = (firstBracketIdx === -1 ? [] : lines.slice(firstBracketIdx))
+
+  // Force the instruction sentence(s) as requested
+  const instr1 = "De volgende drie alinea's van tekst 3 staan hieronder, maar niet in de juiste volgorde."
+  const instr2 = "► Schrijf de letters van de alinea's in de juiste volgorde op in de uitwerkbijlagen."
+
+  // Rebuild bracket blocks: each [X] block stays together; blank line between blocks
+  const blocks: string[] = []
+  let current: string[] = []
+  for (const l of bracketLines) {
+    const t = l.trim()
+    if (!t) continue
+    if (/^\[[A-Za-z]\]/.test(t)) {
+      if (current.length) blocks.push(current.join(' '))
+      current = [t]
+    } else {
+      current.push(t)
+    }
+  }
+  if (current.length) blocks.push(current.join(' '))
+
+  const bracketText = blocks.length ? ('\n\n' + blocks.join('\n\n')) : ''
+  return `${instr1}\n${instr2}${bracketText}`.trim()
+}
+
 function toOptions(q: any): Record<string, string> | undefined {
   if (q.options && typeof q.options === 'object' && !Array.isArray(q.options)) return q.options
 
@@ -117,7 +151,11 @@ function useQuiz(slug: string) {
               points: q.points ?? q.punten,
               textRef: q.textRef ?? q.tekst ?? q.article ?? q.textLabel ?? getTextRefFromQuestionNumber((q.number ?? q.nr ?? (idx + 1)) as number),
 
-              text: cleanQuestionText((q.text ?? q.stem ?? q.prompt ?? q.question ?? '').toString()),
+              text: (() => {
+                const base = cleanQuestionText((q.text ?? q.stem ?? q.prompt ?? q.question ?? '').toString())
+                const n = (q.number ?? q.nr ?? (idx + 1)) as number
+                return n === 3 ? formatQuestion3Text(base) : base
+              })(),
               options,
               correct: (q.correct ?? q.answerKey ?? q.answer ?? '').toString().trim().toUpperCase(),
               feedback: q.feedback ?? ((q.feedbackCorrect || q.feedbackIncorrect) ? { correct: q.feedbackCorrect, wrong: q.feedbackIncorrect } : undefined),

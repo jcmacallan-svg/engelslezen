@@ -244,12 +244,7 @@ export function QuizPane({ quiz, onJumpToPage }: Props) {
             </button>
           )}
         </div>
-        {!SHOW_EXPORT && (
-          <div style={{ marginTop: 8, fontSize: 12, opacity: 0.55 }}>
-            (CSV-export is verborgen. Zet <code>SHOW_EXPORT</code> op <code>true</code> in <code>QuizPane.tsx</code> als je ’m nodig hebt.)
-          </div>
-        )}
-      </div>
+</div>
     </div>
   )
 }
