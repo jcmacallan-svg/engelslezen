@@ -57,6 +57,34 @@ async function logToGoogleSheets(payload: any): Promise<{ ok: boolean; message?:
   }
 }
 
+function normalizeSoftWrap(text: string): string {
+  // Merge line breaks that are just PDF soft-wrapping, keep breaks for lists/options.
+  const lines = (text ?? '').split(/\r?\n/)
+  const kept: string[] = []
+  for (let i = 0; i < lines.length; i++) {
+    const cur = lines[i].trimEnd()
+    if (!cur.trim()) { kept.push(''); continue }
+
+    const next = (i + 1 < lines.length) ? lines[i + 1].trim() : ''
+    const nextStartsList =
+      /^\[[A-Za-z]\]/.test(next) ||                 // [A]
+      /^\d+\b/.test(next) ||                        // 1 ...
+      /^[A-F]\s*[\)\.\:\-]/i.test(next) ||       // A) / B.
+      /^→/.test(next) || /^-\>/.test(next)           // arrow
+    const curEndsHard = /[\.!\?:;]$/.test(cur.trim())
+
+    // If next line is a continuation (not a new list item), join with space.
+    if (next && !nextStartsList && !curEndsHard) {
+      kept.push(cur + ' ' + next)
+      i += 1
+    } else {
+      kept.push(cur)
+    }
+  }
+  // Remove consecutive empties and trim
+  return kept.join('\n').replace(/\n{3,}/g, '\n\n').trim()
+}
+
 function download(filename: string, text: string) {
   const el = document.createElement('a')
   el.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text))
@@ -167,9 +195,15 @@ export function QuizPane({ quiz, onJumpToPage }: Props) {
           const labelNum = (q.number ?? (idx + 1))
 
           const rawText = (q.text ?? '')
-          const displayText = (q.type === 'multi_truefalse' && (q as any).statements?.length)
-            ? rawText.split(/\r?\n/).filter((line: string) => !/^\s*\d+\s+/.test(line.trim())).join('\n').trim()
-            : rawText
+          const displayText = (() => {
+            // Multi true/false: show only the instruction (avoid duplicate/fragment statement text)
+            if (q.type === 'multi_truefalse' && (q as any).statements?.length) {
+              const oneLine = rawText.replace(/\r?\n+/g, ' ').replace(/\s+/g, ' ').trim()
+              const m = oneLine.match(/^(.*?uitwerkbijlage\.)/i)
+              return (m ? m[1] : oneLine).trim()
+            }
+            return normalizeSoftWrap(rawText)
+          })()
           const parts = displayText.split(/\r?\n/)
           const head = (parts[0] ?? '').trim()
           const body = parts.slice(1).join('\n').trim()
