@@ -5,6 +5,46 @@ import { QuizPane } from './components/QuizPane'
 import type { Quiz } from './types'
 import './styles.css'
 
+function getTextRefFromQuestionNumber(n: number): string | undefined {
+  // Mapping provided by teacher for CSE 2019 tijdvak 2
+  if (n === 1) return 'Tekst 1'
+  if (n === 2) return 'Tekst 2'
+  if (n === 3) return 'Tekst 3'
+  if (n >= 4 && n <= 6) return 'Tekst 4'
+  if (n >= 7 && n <= 12) return 'Tekst 5'
+  if (n >= 13 && n <= 18) return 'Tekst 6'
+  if (n >= 19 && n <= 23) return 'Tekst 7'
+  if (n >= 24 && n <= 29) return 'Tekst 8'
+  if (n >= 30 && n <= 33) return 'Tekst 9'
+  if (n >= 34 && n <= 38) return 'Tekst 10'
+  if (n === 39) return 'Tekst 11'
+  if (n === 40) return 'Tekst 12'
+  if (n === 41) return 'Tekst 13'
+  if (n === 42) return 'Tekst 14'
+  return undefined
+}
+
+function getStartPageFromTextRef(textRef?: string): number | undefined {
+  // 1-indexed PDF pages (as shown in the viewer)
+  switch ((textRef ?? '').trim()) {
+    case 'Tekst 1': return 2
+    case 'Tekst 2': return 3
+    case 'Tekst 3': return 4
+    case 'Tekst 4': return 5
+    case 'Tekst 5': return 6
+    case 'Tekst 6': return 8
+    case 'Tekst 7': return 10
+    case 'Tekst 8': return 12
+    case 'Tekst 9': return 14
+    case 'Tekst 10': return 16
+    case 'Tekst 11': return 18
+    case 'Tekst 12': return 19
+    case 'Tekst 13': return 20
+    case 'Tekst 14': return 21
+    default: return undefined
+  }
+}
+
 function cleanQuestionText(s: string): string {
   return (s ?? '')
     // GT footers with or without hyphens, plus any trailing content
@@ -75,13 +115,13 @@ function useQuiz(slug: string) {
               id: (q.id ?? q.qid ?? `q${q.number ?? idx + 1}`).toString(),
               number: q.number ?? q.nr ?? idx + 1,
               points: q.points ?? q.punten,
-              textRef: q.textRef ?? q.tekst ?? q.article ?? q.textLabel,
+              textRef: q.textRef ?? q.tekst ?? q.article ?? q.textLabel ?? getTextRefFromQuestionNumber((q.number ?? q.nr ?? (idx + 1)) as number),
 
               text: cleanQuestionText((q.text ?? q.stem ?? q.prompt ?? q.question ?? '').toString()),
               options,
               correct: (q.correct ?? q.answerKey ?? q.answer ?? '').toString().trim().toUpperCase(),
               feedback: q.feedback ?? ((q.feedbackCorrect || q.feedbackIncorrect) ? { correct: q.feedbackCorrect, wrong: q.feedbackIncorrect } : undefined),
-              sourcePage: q.sourcePage
+              sourcePage: (q.sourcePage ?? getStartPageFromTextRef((q.textRef ?? q.tekst ?? q.article ?? q.textLabel ?? getTextRefFromQuestionNumber((q.number ?? q.nr ?? (idx + 1)) as number)) as any))
             }
           }),
         }
@@ -116,6 +156,7 @@ function QuizRoute() {
   const { slug } = useParams()
   const safeSlug = slug || '2019'
   const { quiz, err } = useQuiz(safeSlug)
+  const [jumpPage, setJumpPage] = useState<number>(1)
 
   const pdfUrl = useMemo(() => `./quizzes/${safeSlug}/source.pdf`, [safeSlug])
 
@@ -134,10 +175,10 @@ function QuizRoute() {
   return (
     <div style={{ height: '100vh', overflow: 'hidden', display: 'flex', gap: 12, padding: 12 }}>
       <div style={{ width: '55%', minWidth: 0, position: 'sticky', top: 12, alignSelf: 'flex-start', height: 'calc(100vh - 24px)' }}>
-        <PdfPane url={pdfUrl} />
+        <PdfPane url={pdfUrl} page={jumpPage} />
       </div>
       <div style={{ flex: 1, minWidth: 0, height: 'calc(100vh - 24px)', overflow: 'auto' }}>
-        <QuizPane quiz={quiz} />
+        <QuizPane quiz={quiz} onJumpToPage={(p) => setJumpPage(p)} />
       </div>
     </div>
   )

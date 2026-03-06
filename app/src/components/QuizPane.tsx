@@ -38,7 +38,7 @@ async function logToGoogleSheets(payload: any): Promise<{ ok: boolean; message?:
   const t = setTimeout(() => controller.abort(), Number(logging.timeoutMs ?? 8000))
 
   try {
-    const res = await fetch(url, {
+    await fetch(url, {
       method: 'POST',
       mode: 'no-cors',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -197,7 +197,7 @@ export function QuizPane({ quiz, onJumpToPage }: Props) {
                   onClick={() => onJumpToPage((q as any).sourcePage)}
                   style={{ marginBottom: 10, padding: '6px 10px', borderRadius: 10, border: '1px solid #2a2f48', background: '#151826', color: '#e9edf3', cursor: 'pointer' }}
                 >
-                  Ga naar pagina {(q as any).sourcePage} in tekst
+                  {q.textRef ? `Ga naar ${q.textRef} (pagina ${(q as any).sourcePage})` : `Ga naar pagina ${(q as any).sourcePage} in tekst`}
                 </button>
               )}
 
