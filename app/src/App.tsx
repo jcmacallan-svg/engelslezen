@@ -55,6 +55,9 @@ function cleanQuestionText(s: string): string {
     .replace(/^\s*\d+\s*\/\s*\d+\s*lees\s*verder.*$/gmi, '')
     // arrows at end of a line
     .replace(/[►▶>]{2,}\s*$/gmi, '')
+    // remove GT codes and 'lees verder' even if they appear mid-line
+    .replace(/\bGT\s*-?\s*\d+[A-Za-z0-9\-]*[^\n]*\n?/gmi, '')
+    .replace(/\blees\s*verder[^\n]*\n?/gmi, '')
     // collapse empty lines
     .split(/\r?\n/)
     .map(l => l.trimEnd())

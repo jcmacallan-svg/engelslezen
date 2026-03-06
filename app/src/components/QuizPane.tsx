@@ -163,7 +163,11 @@ export function QuizPane({ quiz, onJumpToPage }: Props) {
           const result = submitted?.details.find(d => d.id === q.id)
           const labelNum = (q.number ?? (idx + 1))
 
-          const parts = (q.text ?? '').split(/\r?\n/)
+          const rawText = (q.text ?? '')
+          const displayText = (q.type === 'multi_truefalse' && (q as any).statements?.length)
+            ? rawText.split(/\r?\n/).filter((line: string) => !/^\s*\d+\s+/.test(line.trim())).join('\n').trim()
+            : rawText
+          const parts = displayText.split(/\r?\n/)
           const head = (parts[0] ?? '').trim()
           const body = parts.slice(1).join('\n').trim()
 
