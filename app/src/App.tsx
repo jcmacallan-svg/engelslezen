@@ -45,6 +45,20 @@ function getStartPageFromTextRef(textRef?: string): number | undefined {
   }
 }
 
+function getMapChoices(q: any): string[] {
+  // If the mapping answers look numeric, offer 1..N (default 1..5)
+  const parts = Array.isArray(q.parts) ? q.parts : []
+  const answers = parts.map((p: any) => String(p.answer ?? '')).filter(Boolean)
+  const numeric = answers.length > 0 && answers.every(a => /^\d+$/.test(a.trim()))
+  if (numeric) {
+    const maxAns = Math.max(1, ...answers.map(a => parseInt(a, 10)))
+    const n = Math.max(5, maxAns)
+    return Array.from({ length: n }, (_, i) => String(i + 1))
+  }
+  // Default letters A-D
+  return ['a','b','c','d']
+}
+
 function cleanQuestionText(s: string): string {
   return (s ?? '')
     // GT footers with or without hyphens, plus any trailing content
@@ -148,6 +162,9 @@ function useQuiz(slug: string) {
           title: raw.title ?? raw.name ?? 'Quiz',
           questions: (raw.questions ?? []).map((q: any, idx: number) => {
             const options = toOptions(q)
+            const cleanedOptions = options
+              ? Object.fromEntries(Object.entries(options).map(([k, v]) => [k, cleanQuestionText(String(v))]))
+              : undefined
             return {
               id: (q.id ?? q.qid ?? `q${q.number ?? idx + 1}`).toString(),
               number: q.number ?? q.nr ?? idx + 1,
@@ -160,13 +177,13 @@ function useQuiz(slug: string) {
                 return n === 3 ? formatQuestion3Text(base) : base
               })(),
               type: q.type ?? (options ? 'mc' : 'short_answer'),
-              statements: q.statements,
+              statements: Array.isArray(q.statements) ? q.statements.map((s: any) => ({ id: String(s.id), text: cleanQuestionText(String(s.text ?? '')) })) : undefined,
               tfChoices: q.choices,
               tfAnswerKey: (q.type === 'multi_truefalse' ? q.answerKey : undefined),
-              parts: q.parts,
-              mapChoices: ['a','b','c','d'],
+              parts: Array.isArray(q.parts) ? q.parts.map((p: any) => ({ id: String(p.id), label: cleanQuestionText(String(p.label ?? '')), answer: (p.answer ?? '') })) : undefined,
+              mapChoices: getMapChoices(q),
               mapAnswerKey: (q.type === 'mapping' ? Object.fromEntries((q.parts ?? []).map((p: any) => [p.id, p.answer])) : undefined),
-              options,
+              options: cleanedOptions,
               correct: (typeof q.answerKey === 'string' ? q.answerKey : (q.correct ?? q.answer ?? '')).toString().trim().toUpperCase(),
               feedback: q.feedback ?? ((q.feedbackCorrect || q.feedbackIncorrect) ? { correct: q.feedbackCorrect, wrong: q.feedbackIncorrect } : undefined),
               sourcePage: (q.sourcePage ?? getStartPageFromTextRef((q.textRef ?? q.tekst ?? q.article ?? q.textLabel ?? getTextRefFromQuestionNumber((q.number ?? q.nr ?? (idx + 1)) as number)) as any))

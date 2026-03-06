@@ -10,6 +10,7 @@ type Submission = {
   studentName: string
   quizTitle: string
   createdAt: string
+  submittedAt: string
   answers: Record<string, string>
   score: number
   maxScore: number
@@ -82,6 +83,7 @@ export function QuizPane({ quiz, onJumpToPage }: Props) {
       studentName: studentName.trim(),
       quizTitle: quiz.title,
       createdAt: new Date().toISOString(),
+      submittedAt: new Date().toISOString(),
       answers,
       score,
       maxScore,
@@ -99,6 +101,7 @@ export function QuizPane({ quiz, onJumpToPage }: Props) {
       studentName: submission.studentName,
       quizTitle: submission.quizTitle,
       createdAt: submission.createdAt,
+      submittedAt: submission.submittedAt,
       score: submission.score,
       maxScore: submission.maxScore,
       answers: submission.answers,
@@ -180,8 +183,36 @@ export function QuizPane({ quiz, onJumpToPage }: Props) {
               </div>
 
               <div style={{ marginBottom: 8 }}>
-                {head && <div style={{ fontWeight: 700, whiteSpace: 'pre-wrap' }}>{head}</div>}
-                {body && <div style={{ fontWeight: 400, whiteSpace: 'pre-wrap', marginTop: 6, opacity: 0.95 }}>{body}</div>}
+                {q.type === 'mapping' ? (
+                  (() => {
+                    const t = (displayText ?? '').split(/\r?\n/).map(l => l.trim()).filter(Boolean)
+                    const optionStart = t.findIndex(l => /^[a-d]\b/i.test(l))
+                    const arrowStart = t.findIndex(l => l.startsWith('→') || l.startsWith('->') )
+                    const instr = (optionStart === -1 ? (arrowStart === -1 ? t : t.slice(0, arrowStart)) : t.slice(0, optionStart))
+                      .join(' ')
+                      .replace(/\s+/g, ' ')
+                      .trim()
+                    const opts = (optionStart === -1 ? [] : t.slice(optionStart, arrowStart === -1 ? t.length : arrowStart))
+                    const arrow = (arrowStart === -1 ? '' : t.slice(arrowStart).join(' ').replace(/\s+/g,' ').trim())
+
+                    return (
+                      <>
+                        {instr && <div style={{ fontWeight: 700, whiteSpace: 'pre-wrap' }}>{instr}</div>}
+                        {opts.length > 0 && (
+                          <div style={{ marginTop: 8, whiteSpace: 'pre-wrap', opacity: 0.95 }}>
+                            {opts.map((l, i) => <div key={i}>{l}</div>)}
+                          </div>
+                        )}
+                        {arrow && <div style={{ marginTop: 8, fontWeight: 700, whiteSpace: 'pre-wrap' }}>{arrow}</div>}
+                      </>
+                    )
+                  })()
+                ) : (
+                  <>
+                    {head && <div style={{ fontWeight: 700, whiteSpace: 'pre-wrap' }}>{head}</div>}
+                    {body && <div style={{ fontWeight: 400, whiteSpace: 'pre-wrap', marginTop: 6, opacity: 0.95 }}>{body}</div>}
+                  </>
+                )}
               </div>
 
               {typeof (q as any).sourcePage === 'number' && onJumpToPage && (
@@ -233,7 +264,7 @@ export function QuizPane({ quiz, onJumpToPage }: Props) {
                           style={{ padding: '8px 10px', borderRadius: 10, border: '1px solid #2a2f48', background: '#0b0c0f', color: '#e9edf3' }}
                         >
                           <option value="">—</option>
-                          {['a','b','c','d'].map((c) => (
+                          {(q.mapChoices ?? ['a','b','c','d']).map((c) => (
                             <option key={c} value={c}>{c.toUpperCase()}</option>
                           ))}
                         </select>

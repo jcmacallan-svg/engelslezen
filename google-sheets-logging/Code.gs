@@ -15,7 +15,7 @@ function doPost(e) {
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     const sheet = ss.getSheetByName(SHEET_NAME) || ss.insertSheet(SHEET_NAME);
 
-    const fixedHeaders = ['createdAt', 'studentName', 'quizTitle', 'score', 'maxScore'];
+    const fixedHeaders = ['createdAt', 'submittedAt', 'studentName', 'quizTitle', 'score', 'maxScore'];
     const answerKeys = body.answers ? Object.keys(body.answers).sort() : [];
     const headers = fixedHeaders.concat(answerKeys);
     ensureHeaderRow_(sheet, headers);
@@ -23,6 +23,7 @@ function doPost(e) {
     const headerRow = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
     const row = headerRow.map(h => {
       if (h === 'createdAt') return body.createdAt || '';
+      if (h === 'submittedAt') return body.submittedAt || body.createdAt || '';
       if (h === 'studentName') return body.studentName || '';
       if (h === 'quizTitle') return body.quizTitle || '';
       if (h === 'score') return body.score ?? '';
